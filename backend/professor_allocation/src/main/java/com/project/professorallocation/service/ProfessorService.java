@@ -1,78 +1,83 @@
-package com.project.professorallocation.service;
+package com.project.professor.allocation.service;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.springframework.dao.DataIntegrityViolationException;
+import com.project.professor.allocation.entity.Department;
+import com.project.professor.allocation.entity.Professor;
+import com.project.professor.allocation.exception.EntityInstanceNotFoundException;
+import com.project.professor.allocation.repository.ProfessorRepository;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.project.professorallocation.entity.Allocation;
-import com.project.professorallocation.entity.Department;
-import com.project.professorallocation.entity.Professor;
-import com.project.professorallocation.repository.ProfessorRepository;
+import java.util.List;
+import java.util.function.Supplier;
 
+@Transactional
 @Service
 public class ProfessorService {
 
-	private ProfessorRepository professorRepository;
-	private DepartmentService departmentService;
-	
-	public ProfessorService(ProfessorRepository professorRepository, DepartmentService departmentService) {
-		super();
-		this.professorRepository = professorRepository;
-		this.departmentService = departmentService;
-	}
-	
-	
-	public Professor create(Professor professor) throws DataIntegrityViolationException {
-		professor.setId(null);
-		return save(professor);
-	}
-	
-	
-	public Professor update(Professor professor) throws DataIntegrityViolationException {
-		Long id = professor.getId();
-		if(id == null) {
-			return null;
-		}
-		if(!professorRepository.existsById(id)) {
-			return null;
-		} return save(professor);
-	}
-		
-	
-	public List<Professor> findAll(String name) {
-		if(name == null) {
-		return professorRepository.findAll();
-		}else {
-			return professorRepository.findByNameContainingIgnoreCase(name);
-		}
-	}
-	
-	
-	public Professor findById(Long professorId) {
-		return professorRepository.findById(professorId).orElse(null);
-	}
-	
-	
-	public void deleteAll() {
-		professorRepository.deleteAllInBatch();
-	}
-	
-	
-	public void deleteById(Long professorId) {
-		if(professorId != null && professorRepository.existsById(professorId)) {
-			professorRepository.deleteById(professorId);
-		}
-	}
-	
-	
-	private Professor save(Professor professor) throws DataIntegrityViolationException {
-		professor = professorRepository.save(professor);
-		Department d = professor.getDepartment();
-		d = departmentService.findById(d.getId());
-		professor.setDepartment(d);
-		professor.setAllocations(new ArrayList<Allocation>());
-		return professor;
-	}
+    private final ProfessorRepository professorRepository;
+    private final DepartmentService departmentService;
+
+    public ProfessorService(ProfessorRepository professorRepository, DepartmentService departmentService) {
+        super();
+        this.professorRepository = professorRepository;
+        this.departmentService = departmentService;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Professor> findAll(String name) {
+        if (name == null) {
+            return professorRepository.findAll();
+        } else {
+            return professorRepository.findByNameContainingIgnoreCase(name);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Professor findById(Long id) {
+        return professorRepository.findById(id).orElseThrow(getEntityInstanceNotFoundExceptionSupplier(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Professor> findByDepartment(Long departmentId) {
+        return professorRepository.findByDepartmentId(departmentId);
+    }
+
+    public Professor save(Professor professor) {
+        professor.setId(null);
+        return saveInternal(professor);
+    }
+
+    public Professor update(Professor professor) {
+        Long id = professor.getId();
+        if (id == null || !professorRepository.existsById(id)) {
+            throw getEntityInstanceNotFoundExceptionSupplier(id).get();
+        }
+
+        return saveInternal(professor);
+    }
+
+    public void deleteById(Long id) {
+        if (id != null && professorRepository.existsById(id)) {
+            professorRepository.deleteById(id);
+        }
+    }
+
+    public void deleteAll() {
+        professorRepository.deleteAllInBatch();
+    }
+
+    private Professor saveInternal(Professor professor) {
+        professor = professorRepository.save(professor);
+
+        Department department = professor.getDepartment();
+        department = departmentService.findById(department.getId());
+        professor.setDepartment(department);
+
+        return professor;
+    }
+
+    private Supplier<EntityInstanceNotFoundException> getEntityInstanceNotFoundExceptionSupplier(Long id) {
+        return () -> new EntityInstanceNotFoundException(Professor.class, id);
+    }
 }
