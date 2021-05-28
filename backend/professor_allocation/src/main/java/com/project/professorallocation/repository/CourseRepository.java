@@ -1,14 +1,13 @@
-package com.project.professorallocation.repository;
+package com.project.professor.allocation.repository;
 
-import java.util.List;
-
+import com.project.professor.allocation.entity.Course;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.project.professorallocation.entity.Course;
+import java.util.List;
 
 @Repository
 public interface CourseRepository extends JpaRepository<Course, Long> {
 
-	List<Course> findByNameContainingIgnoreCase(String name);
+    List<Course> findByNameContainingIgnoreCase(String name);
 }

@@ -1,14 +1,27 @@
-package com.project.professorallocation.repository;
+package com.project.professor.allocation.repository;
 
-import java.util.List;
-
+import com.project.professor.allocation.entity.Allocation;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.project.professorallocation.entity.Allocation;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AllocationRepository extends JpaRepository<Allocation, Long> {
 
-	List<Allocation> findByProfessorId(Long profId);
+    @EntityGraph(attributePaths = {"professor", "course", "professor.department"})
+    @Override
+    List<Allocation> findAll();
+
+    @EntityGraph(attributePaths = {"professor", "course", "professor.department"})
+    @Override
+    Optional<Allocation> findById(Long id);
+
+    @EntityGraph(attributePaths = {"professor", "course", "professor.department"})
+    List<Allocation> findByProfessorId(Long professorId);
+
+    @EntityGraph(attributePaths = {"professor", "course", "professor.department"})
+    List<Allocation> findByCourseId(Long courseId);
 }
