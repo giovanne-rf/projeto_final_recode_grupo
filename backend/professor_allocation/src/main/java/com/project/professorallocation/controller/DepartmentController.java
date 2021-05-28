@@ -1,126 +1,109 @@
-package com.project.professorallocation.controller;
+package com.project.professor.allocation.controller;
 
-import java.util.List;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.project.professorallocation.entity.Department;
-import com.project.professorallocation.service.DepartmentService;
-
+import com.project.professor.allocation.dto.DepartmentCompleteDTO;
+import com.project.professor.allocation.dto.DepartmentCreationDTO;
+import com.project.professor.allocation.dto.DepartmentSimpleDTO;
+import com.project.professor.allocation.dto.ErrorDTO;
+import com.project.professor.allocation.entity.Department;
+import com.project.professor.allocation.mapper.DepartmentMapper;
+import com.project.professor.allocation.service.DepartmentService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-@Api(tags = {"Departments"})
+import javax.validation.Valid;
+import java.util.List;
+
+@Api(tags = {"departments"})
 @RestController
 @RequestMapping(path = "/departments", produces = MediaType.APPLICATION_JSON_VALUE)
 public class DepartmentController {
-	
-private DepartmentService departmentService;
-	
-	public DepartmentController(DepartmentService departmentService) {
-		this.departmentService = departmentService;
-	}
 
-	@ApiOperation(value = "Create department")
-	@ApiResponses({
-		@ApiResponse(code = 201, message = "Department successfully created!"),
-		@ApiResponse(code = 400, message = "Wrong data inserted!"),
-	})
-	@PostMapping
-	@ResponseStatus(HttpStatus.CREATED)
-	public ResponseEntity<Department> create(@RequestBody Department department) {
-		try {
-			Department department2 = departmentService.create(department);
-			return new ResponseEntity<>(department2, HttpStatus.CREATED);
-		}catch(Exception e) {
-			return new ResponseEntity<>(HttpStatus.BAD_REQUEST); 
-		}
-	}
-	
-	@ApiOperation(value = "Update department")
-	@ApiResponses({
-		@ApiResponse(code = 200, message = "Department successfully updated!"),
-		@ApiResponse(code = 400, message = "Wrong data inserted!"),
-		@ApiResponse(code = 404, message = "Department not found!")
-	})
-	@PutMapping(path = "/{department_id}")
-	@ResponseStatus(HttpStatus.OK)
-	public ResponseEntity<Department> update(@PathVariable(name = "department_id") Long departmentId,
-											@RequestBody Department department) {
-		department.setId(departmentId);
-		try {
-			Department department2 = departmentService.update(department);
-			if(department2 == null) {
-				return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-			}else {
-				return new ResponseEntity<>(department2, HttpStatus.OK);
-			}
-		}catch(Exception e) {
-			return new ResponseEntity<>(HttpStatus.BAD_REQUEST); 
-		}		
-	}
+    private final DepartmentService departmentService;
+    private final DepartmentMapper mapper;
 
-	@ApiOperation(value = "Find departments")
-	@ApiResponses({
-		@ApiResponse(code = 200, message = "Department(s) found!")
-	})
-	@GetMapping
-	@ResponseStatus(HttpStatus.OK)
-	public ResponseEntity<List<Department>> findAll(@RequestParam(name = "name", required = false) String name) {
-		List<Department> departments = departmentService.findAll(name);
-		return new ResponseEntity<> (departments, HttpStatus.OK);
-	}
-	
-	@ApiOperation(value = "Find department by ID")
-	@ApiResponses({
-		@ApiResponse(code = 200, message = "Department found!"),
-		@ApiResponse(code = 404, message = "Department not found!")
-	})
-	@GetMapping(path = "/{department_id}")
-	@ResponseStatus(HttpStatus.OK)
-	public ResponseEntity<Department> findById(@PathVariable(name = "department_id") Long departmentId) {
-		Department department = departmentService.findById(departmentId);
-		if(department == null) {
-			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-		}else {
-			return new ResponseEntity<>(department, HttpStatus.OK);
-		}
-	}
-	
-	@ApiOperation(value = "Delete department by ID")
-	@ApiResponses({
-		@ApiResponse(code = 204, message = "Department successfully deleted!")
-	})
-	@DeleteMapping(path = "/{department_id}")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public ResponseEntity<Void> deleteById(@PathVariable (name = "department_id") Long departmentId) {
-		departmentService.deleteById(departmentId);
-		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-	}
-	
-	@ApiOperation(value = "Delete all departments")
-	@ApiResponses({
-		@ApiResponse(code = 204, message = "Departments successfully deleted!")
-	})
-	@DeleteMapping
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public ResponseEntity<Void> deleteAll() {
-		departmentService.deleteAll();
-		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-	}
+    public DepartmentController(DepartmentService departmentService, DepartmentMapper mapper) {
+        super();
+        this.departmentService = departmentService;
+        this.mapper = mapper;
+    }
 
+    @ApiOperation(value = "Find all departments")
+    @ApiResponses({
+            @ApiResponse(code = 200, message = "OK")
+    })
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<List<DepartmentSimpleDTO>> findAll(@RequestParam(name = "name", required = false) String name) {
+        List<Department> departments = departmentService.findAll(name);
+        return new ResponseEntity<>(mapper.toSimpleDTO(departments), HttpStatus.OK);
+    }
+
+    @ApiOperation(value = "Find a department by id")
+    @ApiResponses({
+            @ApiResponse(code = 200, message = "OK"),
+            @ApiResponse(code = 400, message = "Bad Request", response = ErrorDTO.class),
+            @ApiResponse(code = 404, message = "Not Found", response = ErrorDTO.class)
+    })
+    @GetMapping(path = "/{department_id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<DepartmentCompleteDTO> findById(@PathVariable(name = "department_id") Long id) {
+        Department department = departmentService.findById(id);
+        return new ResponseEntity<>(mapper.toCompleteDTO(department), HttpStatus.OK);
+    }
+
+    @ApiOperation(value = "Save a department")
+    @ApiResponses({
+            @ApiResponse(code = 201, message = "Created"),
+            @ApiResponse(code = 400, message = "Bad Request", response = ErrorDTO.class)
+    })
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<DepartmentSimpleDTO> save(@Valid @RequestBody DepartmentCreationDTO departmentDTO) {
+        Department department = departmentService.save(mapper.toEntity(departmentDTO));
+        return new ResponseEntity<>(mapper.toSimpleDTO(department), HttpStatus.CREATED);
+    }
+
+    @ApiOperation(value = "Update a department")
+    @ApiResponses({
+            @ApiResponse(code = 200, message = "OK"),
+            @ApiResponse(code = 400, message = "Bad Request", response = ErrorDTO.class),
+            @ApiResponse(code = 404, message = "Not Found", response = ErrorDTO.class)
+    })
+    @PutMapping(path = "/{department_id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<DepartmentSimpleDTO> update(@PathVariable(name = "department_id") Long id,
+                                                      @Valid @RequestBody DepartmentCreationDTO departmentDTO) {
+        departmentDTO.setId(id);
+        Department department = departmentService.update(mapper.toEntity(departmentDTO));
+        return new ResponseEntity<>(mapper.toSimpleDTO(department), HttpStatus.OK);
+    }
+
+    @ApiOperation(value = "Delete a department")
+    @ApiResponses({
+            @ApiResponse(code = 204, message = "No Content"),
+            @ApiResponse(code = 400, message = "Bad Request", response = ErrorDTO.class)
+    })
+    @DeleteMapping(path = "/{department_id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public ResponseEntity<Void> deleteById(@PathVariable(name = "department_id") Long id) {
+        departmentService.deleteById(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @ApiOperation(value = "Delete all departments")
+    @ApiResponses({
+            @ApiResponse(code = 204, message = "No Content")
+    })
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public ResponseEntity<Void> deleteAll() {
+        departmentService.deleteAll();
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
 }
